@@ -1,0 +1,12 @@
+Symlinking /home/paul/catkin_ws_denzelbeauty/devel/./local_setup.sh
+Symlinking /home/paul/catkin_ws_denzelbeauty/devel/./local_setup.bash
+Symlinking /home/paul/catkin_ws_denzelbeauty/devel/./setup.zsh
+Symlinking /home/paul/catkin_ws_denzelbeauty/devel/./env.sh
+Symlinking /home/paul/catkin_ws_denzelbeauty/devel/./_setup_util.py
+Symlinking /home/paul/catkin_ws_denzelbeauty/devel/./setup.bash
+Symlinking /home/paul/catkin_ws_denzelbeauty/devel/./setup.sh
+Symlinking /home/paul/catkin_ws_denzelbeauty/devel/./local_setup.zsh
+Symlinking /home/paul/catkin_ws_denzelbeauty/devel/./cmake.lock
+Symlinking /home/paul/catkin_ws_denzelbeauty/devel/share/catkin_tools_prebuild/cmake/catkin_tools_prebuildConfig-version.cmake
+Symlinking /home/paul/catkin_ws_denzelbeauty/devel/share/catkin_tools_prebuild/cmake/catkin_tools_prebuildConfig.cmake
+Symlinking /home/paul/catkin_ws_denzelbeauty/devel/lib/pkgconfig/catkin_tools_prebuild.pc

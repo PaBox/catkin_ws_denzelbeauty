@@ -1,0 +1,8 @@
+prefix=/home/paul/catkin_ws_denzelbeauty/devel/.private/assignment2_publisher_subscriber
+
+Name: assignment2_publisher_subscriber
+Description: Description of assignment2_publisher_subscriber
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/paul/catkin_ws_denzelbeauty/devel/.private/assignment2_publisher_subscriber/lib 
+Requires: 

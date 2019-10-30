@@ -1,0 +1,1 @@
+/home/paul/catkin_ws_denzelbeauty/devel/.private/assignment2_publisher_subscriber/lib/pkgconfig/assignment2_publisher_subscriber.pc

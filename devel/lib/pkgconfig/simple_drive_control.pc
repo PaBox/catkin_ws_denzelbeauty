@@ -1,0 +1,1 @@
+/home/paul/catkin_ws_denzelbeauty/devel/.private/simple_drive_control/lib/pkgconfig/simple_drive_control.pc
