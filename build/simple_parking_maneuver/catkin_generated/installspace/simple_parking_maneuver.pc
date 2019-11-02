@@ -1,0 +1,8 @@
+prefix=/home/paul/catkin_ws_denzelbeauty/install
+
+Name: simple_parking_maneuver
+Description: Description of simple_parking_maneuver
+Version: 0.0.1
+Cflags: -I/home/paul/catkin_ws_denzelbeauty/install/include
+Libs: -L/home/paul/catkin_ws_denzelbeauty/install/lib 
+Requires: message_runtime std_msgs

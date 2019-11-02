@@ -1,0 +1,1 @@
+/home/paul/catkin_ws_denzelbeauty/devel/.private/assignment2_publisher_subscriber/share/assignment2_publisher_subscriber/cmake/assignment2_publisher_subscriberConfig-version.cmake

@@ -1,0 +1,8 @@
+prefix=/home/paul/catkin_ws_denzelbeauty/install
+
+Name: simple_drive_control
+Description: Description of simple_drive_control
+Version: 0.0.1
+Cflags: 
+Libs: -L/home/paul/catkin_ws_denzelbeauty/install/lib 
+Requires: 

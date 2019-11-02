@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/paul/catkin_ws_denzelbeauty/devel/.private/simple_drive_control/setup.sh

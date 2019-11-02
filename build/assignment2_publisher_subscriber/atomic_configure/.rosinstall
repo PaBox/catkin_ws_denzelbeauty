@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/paul/catkin_ws_denzelbeauty/devel/.private/assignment2_publisher_subscriber/setup.sh

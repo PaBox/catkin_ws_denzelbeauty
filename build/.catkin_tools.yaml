@@ -1,0 +1,6 @@
+devel_space: /home/paul/catkin_ws_denzelbeauty/devel
+install: false
+install_space: /home/paul/catkin_ws_denzelbeauty/install
+profile: default
+source_space: /home/paul/catkin_ws_denzelbeauty/src
+workspace: /home/paul/catkin_ws_denzelbeauty
