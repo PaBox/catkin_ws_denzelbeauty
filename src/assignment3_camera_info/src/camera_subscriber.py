@@ -22,8 +22,38 @@ def callback(rgb_msg, camera_info):
    x,y,w,h = 160,50,390,280
    dst = rgb_image_th[y:y+h, x:x+w]
 
+   #inverts image for blob detection
+   dst=cv.bitwise_not(dst)
+
+   #define sections for left and right side
+   pleft1 = dst[0:90, 0:195]
+   pleft2 = dst[90:150, 0:195]
+   pleft3 = dst[150:280, 0:195]
+
+   pright1 = dst[0:80, 195:390]
+   pright2 = dst[80:130, 195:390]
+   pright3 = dst[130:280, 195:390]
+
+   #define array of image parts
+   img_arr = [pleft1,pleft2,pleft3,pright1,pright2,pright3]
+
+   #initialize BlobDetector
+   blob_dec = cv.SimpleBlobDetector_Params()
+   blob_dec.filterByCircularity = False
+   blob_dec.filterByArea = False
+   blob_detector = cv.SimpleBlobDetector_create(blob_dec)
+   
+   #for loop to cycle through image parts
+   img_index=0
+   for img in img_arr:
+      keypoint = blob_detector.detect(img)
+      pkey = cv.drawKeypoints(img, keypoint, np.array([]), (0,0,255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+      
+      img_index = img_index + 1
+      img_title = 'Image Part Nr.{}'.format(img_index)
+      cv.imshow(img_title, pkey)
+
    rospy.loginfo("\n\n\n\n\n\n\n %s %s \n\n\n\n\n\n\n", camera_info_D,camera_info_K)
-   cv.imshow("Filtered Image", dst)
    cv.waitKey(1)
 
 if __name__ == '__main__':
