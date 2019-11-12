@@ -8,17 +8,22 @@ import numpy as np
 import cv2 as cv
 
 def callback(rgb_msg, camera_info):
-   rgb_image = CvBridge().imgmsg_to_cv2(rgb_msg, desired_encoding="bgr8")
-   #rgb_image_resized = cv.resize(rgb_image, None, fx=0.5, fy=0.5)
-   #rgb_image_gray = cv.cvtColor(rgb_image, cv.COLOR_BGR2GRAY)
-   ret, rgb_image_cvt_color = cv.threshold(rgb_image, 250, 255, cv.THRESH_BINARY)
    camera_info_K = np.array(camera_info.K).reshape([3, 3])
    camera_info_D = np.array(camera_info.D)
-   #draw_img = cv.cvtColor(rgb_image_cvt_color, cv.COLOR_GRAY2RGB)
-   rgb_undist = cv.undistort(rgb_image_cvt_color , camera_info_K, camera_info_D)
+
+   #undistort and thresholding image
+   rgb_image = CvBridge().imgmsg_to_cv2(rgb_msg, desired_encoding="bgr8")
+   ret, rgb_image_th = cv.threshold(rgb_image, 250, 255, cv.THRESH_BINARY)
+
+   #draw rectangles
+   cv.rectangle(rgb_image_th, (230, 240), (480, 600), (0, 0, 0), -1)
+   
+   #resize and cut picture
+   x,y,w,h = 160,50,390,280
+   dst = rgb_image_th[y:y+h, x:x+w]
 
    rospy.loginfo("\n\n\n\n\n\n\n %s %s \n\n\n\n\n\n\n", camera_info_D,camera_info_K)
-   cv.imshow("Filtered Image", rgb_undist)
+   cv.imshow("Filtered Image", dst)
    cv.waitKey(1)
 
 if __name__ == '__main__':
