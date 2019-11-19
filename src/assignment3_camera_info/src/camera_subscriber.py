@@ -22,9 +22,6 @@ def callback(rgb_msg, camera_info):
    x,y,w,h = 160,50,390,280
    dst = rgb_image_th[y:y+h, x:x+w]
 
-   #inverts image for blob detection
-   dst=cv.bitwise_not(dst)
-
    #define sections for left and right side
    pleft1 = dst[0:90, 0:195]
    pleft2 = dst[90:150, 0:195]
@@ -37,17 +34,25 @@ def callback(rgb_msg, camera_info):
    #define array of image parts
    img_arr = [pleft1,pleft2,pleft3,pright1,pright2,pright3]
 
-   #initialize BlobDetector
-   blob_dec = cv.SimpleBlobDetector_Params()
-   blob_dec.filterByCircularity = False
-   blob_dec.filterByArea = False
-   blob_detector = cv.SimpleBlobDetector_create(blob_dec)
-   
    #for loop to cycle through image parts
    img_index=0
    for img in img_arr:
-      keypoint = blob_detector.detect(img)
-      pkey = cv.drawKeypoints(img, keypoint, np.array([]), (0,0,255))
+      whitePointList = np.argwhere( np.asarray(img) >= 245 )
+      rospy.loginfo(whitePointList)
+      numWhitePoints = len( whitePointList )
+      setwpoint = [0,0]
+      for wpoint in whitePointList:
+         setwpoint[0]+=wpoint[0]
+         setwpoint[1]+=wpoint[1]
+
+      setwpoint = [
+         abs(setwpoint[0]/numWhitePoints),
+         abs(setwpoint[1]/numWhitePoints)
+      ]
+
+      newkp = cv.KeyPoint(setwpoint[0],setwpoint[1],1)
+
+      pkey = cv.drawKeypoints(img, [newkp], np.array([]), (0,0,255))
       
       img_index = img_index + 1
       img_title = 'Image Part Nr.{}'.format(img_index)
