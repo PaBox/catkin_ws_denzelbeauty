@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import rospy
-from autominy_msgs.msg import SpeedCommand, NormalizedSteeringCommand
+from autominy_msgs.msg import SpeedCommand
 
 def callbackSpeed(data):
 	rospy.loginfo(

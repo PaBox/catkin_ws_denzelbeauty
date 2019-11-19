@@ -47,7 +47,7 @@ def callback(rgb_msg, camera_info):
    img_index=0
    for img in img_arr:
       keypoint = blob_detector.detect(img)
-      pkey = cv.drawKeypoints(img, keypoint, np.array([]), (0,0,255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+      pkey = cv.drawKeypoints(img, keypoint, np.array([]), (0,0,255))
       
       img_index = img_index + 1
       img_title = 'Image Part Nr.{}'.format(img_index)
