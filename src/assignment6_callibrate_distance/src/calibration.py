@@ -4,7 +4,7 @@
 import rospy
 import math
 #CONTROL
-from autominy_msgs.msg import SteeringFeedback, NormalizedSteeringCommand, NormalizedSpeedCommand, Speed, Tick
+from autominy_msgs.msg import SteeringFeedback, NormalizedSteeringCommand, SpeedCommand, Speed, Tick
 #COORDINATE SYSTEM
 from nav_msgs.msg import Odometry
 
@@ -20,9 +20,13 @@ BASESPEED = []
 MEASURING = False
 ODOM_ON = False
 GPS_ON = False
-GPS_NUMBER = 5
+GPS_NUMBER = 15
 
-    #CALLBACK FUNCTIONS
+#HELPER FUNCTION for removing irregularities
+def roundFloat(f):
+    return float('%.3f' % (f))
+
+#CALLBACK FUNCTIONS
 def steeringCallback(data):
     global STEER
     STEER=data.value
@@ -35,7 +39,8 @@ def gpsCallback(data):
         GPS_ON = True
     
     header = data.pose.pose.position
-    X=header.x;Y=header.y
+    X=roundFloat(header.x);
+    Y=roundFloat(header.y);
 
 def speedCallback(data):
     global SPEED
@@ -50,13 +55,17 @@ def tickCallback(data):
     global SPEED
 
     TICKS=data.header.seq
+    rospy.loginfo('{}, {}'.format(DISTANCE,SPEED))
+
     if MEASURING:
-        DISTANCE += (math.sqrt(
+        add_distance = (math.sqrt(
             (X - LAST_POS[0])**2 +
             (Y - LAST_POS[1])**2))
+        if not (add_distance<0.01):
+            DISTANCE += roundFloat(add_distance)
+            LAST_POS = [X,Y]
         BASESPEED.extend(
             [SPEED]) 
-    LAST_POS = [X,Y]
     
 def odomCallback(data):
     global LAST_POS
@@ -66,8 +75,9 @@ def odomCallback(data):
     if not ODOM_ON:
         ODOM_ON = True
     
-    header = data.pose.pose.position
-    X=header.x;Y=header.y
+    if not GPS_ON:
+        header = data.pose.pose.position
+        X=header.x;Y=header.y
 
 #DRIVING FUNCTIONS
 def steer(val):
@@ -76,7 +86,7 @@ def steer(val):
     return norm_steer
 
 def speed(val):
-    norm_speed=NormalizedSpeedCommand()
+    norm_speed=SpeedCommand()
     norm_speed.value=val
     return norm_speed
 
@@ -97,14 +107,16 @@ def drive(distance, driveSpeed, angle, testRate):
     rospy.sleep(1)
 
     #set start parameters
+    LAST_POS = [X,Y]
     MEASURING = True
     first_pos = [X,Y]
 
     while not rospy.is_shutdown() and DISTANCE < distance:
         pubSpeed.publish(speed(driveSpeed))
 
+    #while not rospy.is_shutdown() and SPEED > 0.01:
     pubSpeed.publish(speed(0.0))
-    rospy.sleep(1)
+    
     last_pos = [X,Y]
     MEASURING = False
 
@@ -118,12 +130,17 @@ def drive(distance, driveSpeed, angle, testRate):
         )
     )
 
-    return DISTANCE
+    driven_distance = DISTANCE
+
+    DISTANCE = 0.0
+    LAST_POS = [0.0,0.0]
+
+    return driven_distance
 
 #switch from GPS to ODOM
 def initCoordinateSystem():
     rospy.loginfo("Initialising distance tracking system...")
-    rospy.sleep(2)
+    rospy.sleep(1)
     if not GPS_ON:
         rospy.loginfo("No GPS found, switching to ODOM")
         while not rospy.is_shutdown() and not ODOM_ON:
@@ -144,21 +161,22 @@ if __name__ == '__main__':
         subAngle = rospy.Subscriber('/sensors/arduino/steering_angle', SteeringFeedback, steeringCallback, queue_size=10)
         subGPS = rospy.Subscriber('/communication/gps/{}'.format(GPS_NUMBER), Odometry, gpsCallback, queue_size=10)
         subSpeed = rospy.Subscriber('/sensors/speed', Speed, speedCallback, queue_size=10)
-        subTicks = rospy.Subscriber('/sensors/arduino/ticks', Tick, tickCallback, queue_size=10)
-        sub_odom = rospy.Subscriber("/sensors/odometry/odom", Odometry, odomCallback, queue_size=10)
+        subTicks = rospy.Subscriber('/sensors/arduino/ticks', Tick, tickCallback, queue_size=1)
+        sub_odom = rospy.Subscriber('/sensors/odometry/odom', Odometry, odomCallback, queue_size=10)
 
         #ADD PUBLISHER
         pubSteer = rospy.Publisher('/actuators/steering_normalized', NormalizedSteeringCommand, queue_size=10)
-        pubSpeed = rospy.Publisher('/actuators/speed_normalized', NormalizedSpeedCommand, queue_size=10)
+        pubSpeed = rospy.Publisher('/actuators/speed', SpeedCommand, queue_size=10)
         rospy.sleep(1)
 
         #Init right Coordination System
         initCoordinateSystem()
 
         #CALL DRIVING FUNCTION
-        #drive(1.0, 0.2, 1.0, rate) #Left
-        drive(1.0, 0.2, 0.0, rate) #Straight
+        #drive(1.0, 0.2,  1.0, rate) #Left
+        #drive(1.0, 0.2,  0.0, rate) #Straight
         #drive(1.0, 0.2, -1.0, rate) #Right
+        drive(1.0,-0.2,  0.0, rate) #Backwards
 		
     except rospy.ROSInterruptException:
         pass
