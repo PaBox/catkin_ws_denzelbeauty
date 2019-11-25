@@ -55,7 +55,6 @@ def tickCallback(data):
     global SPEED
 
     TICKS=data.header.seq
-    rospy.loginfo('{}, {}'.format(DISTANCE,SPEED))
 
     if MEASURING:
         add_distance = (math.sqrt(
@@ -120,20 +119,20 @@ def drive(distance, driveSpeed, angle, testRate):
     last_pos = [X,Y]
     MEASURING = False
 
+    driven_distance = DISTANCE
+
+    DISTANCE = 0.0
+    LAST_POS = [0.0,0.0]
+
     rospy.loginfo(
         '\n{}mastered {} meters\nfrom {}\nto {},\nat a base Speed of {}.'.format(
             rospy.get_caller_id(),
-            DISTANCE,
+            driven_distance,
             first_pos,
             last_pos,
             (sum(BASESPEED)/len(BASESPEED))
         )
     )
-
-    driven_distance = DISTANCE
-
-    DISTANCE = 0.0
-    LAST_POS = [0.0,0.0]
 
     return driven_distance
 
