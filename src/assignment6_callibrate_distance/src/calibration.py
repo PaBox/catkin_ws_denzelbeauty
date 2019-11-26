@@ -20,7 +20,7 @@ BASESPEED = []
 MEASURING = False
 ODOM_ON = False
 GPS_ON = False
-GPS_NUMBER = 15
+GPS_NUMBER = 5
 
 #HELPER FUNCTION for removing irregularities
 def roundFloat(f):
@@ -172,10 +172,10 @@ if __name__ == '__main__':
         initCoordinateSystem()
 
         #CALL DRIVING FUNCTION
-        #drive(1.0, 0.2,  1.0, rate) #Left
+        drive(1.0, 0.2,  1.0, rate) #Left
         #drive(1.0, 0.2,  0.0, rate) #Straight
         #drive(1.0, 0.2, -1.0, rate) #Right
-        drive(1.0,-0.2,  0.0, rate) #Backwards
+        #drive(1.0,-0.2,  0.0, rate) #Backwards
 		
     except rospy.ROSInterruptException:
         pass
