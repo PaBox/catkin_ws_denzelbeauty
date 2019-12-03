@@ -22,14 +22,10 @@ BLACK_RECTANGLES = [
    [(160, 400), (460, 480)]  #car
 ]
 
-FOCUS_AREA = [
-   [0,160],[100,560]
-]
-
-RANSAC_MASKS = [ # FOCUS_AREA_FORMAT
-   [(0,0),(200,100)],
-   [(200,0),(300,100)],
-   [(300,0),(399,100)]
+RANSAC_MASKS = [
+   [(0,160),(200,260)],
+   [(200,160),(300,360)],
+   [(300,160),(500,480)]
 ]
 
 
@@ -38,14 +34,15 @@ def callback(image):
    #undistort and thresholding image
    infra_image = CV_BRIDGE.imgmsg_to_cv2(image, desired_encoding="8UC1")
    infra_image_th = blackoutImage(infra_image)
-   infra_image_th_rf = cutRansacMasks(infra_image_th)
+   infra_image_th_rf,bg,nl = cutRansacMasks(infra_image_th,infra_image)
 
    #define sections for left and right side
-   #cv.imshow("Original", rgb_image)
-   #cv.imshow("Cam", infra_image_th_rf)
-   cv.imshow("Cam uncut", infra_image_th)
+   cv.imshow("Original", bg)
+   cv.imshow("Only Mask", nl)
+   cv.imshow("Mixed Output", infra_image_th_rf)
 
-   image_pub.publish(CV_BRIDGE.cv2_to_imgmsg(infra_image_th, "8UC1"))
+
+   image_pub.publish(CV_BRIDGE.cv2_to_imgmsg(infra_image_th_rf, "8UC1"))
 
    cv.waitKey(1)
 
@@ -54,19 +51,19 @@ def functionresult(x, par):
    return m*x+b
 
 def returnLists(image):
-   return image[:,1], image[:,0]
+   return image[:, 1], image[:, 0]
 
 def testVarCov(points):
-   x, y = points[:, 1], points[:, 0]
-   (xm,ym) = np.mean(x),np.mean(y)
+   x, y = returnLists(points)
+   xm,ym = np.mean(x),np.mean(y)
 
-   xdiff = (x-xm)
-   variance = np.sum(xdiff *  (y-ym))
-   covariance = np.sum(xdiff ** 2)
+   variance = np.sum((x-xm) *  (y-ym))
+   covariance = np.sum((x-xm) ** 2)
 
    out_m = ( variance / covariance )
    out_b = ym - out_m*xm
-   rospy.loginfo('{}{}'.format(out_m,out_b))
+   #gives out pars
+   #rospy.loginfo('(m: "{}",b: "{}")'.format(out_m,out_b))
    return out_m, out_b
 
 def ransac(candidates, itr, thr, perc):
@@ -76,16 +73,22 @@ def ransac(candidates, itr, thr, perc):
 
    for _ in range(itr):
       evolution = np.random.permutation(candidates)[:min_coeff]
+      #rospy.loginfo(evolution)
       par = testVarCov(evolution)
       out = notFitting(candidates, par)
       fitting_all = candidates[out < thr]
       fitting_score = len(fitting_all)
+      #rospy.loginfo(fitting_all)
 
-      if (fitting_score / float(len(candidates)) < perc) or (fitting_score<min_coeff):
+      if (
+         fitting_score / float(len(candidates)) < (perc/100) or fitting_score<min_coeff
+      ):
          continue
       if (fitting_score > max_fitting_score):
            max_fitting_score = fitting_score
            best_fitting = testVarCov(fitting_all)
+           #log succesful choice of point
+           rospy.loginfo(best_fitting)
 
    if best_fitting is None:
       rospy.loginfo("NO FITS FOUND")
@@ -93,33 +96,40 @@ def ransac(candidates, itr, thr, perc):
    else:
       return best_fitting
            
+def recFor(pics, x1, y1, x2, y2, clr,th):
+   for pic in pics:
+      cv.rectangle(pic, (int(x1),int(y1)), (int(x2),int(y2)),clr,th)
 
+def lineFor(pics, x1, y1, x2, y2, clr,th):
+   for pic in pics:
+      cv.line(pic, (int(x1),int(y1)), (int(x2),int(y2)),clr,th)
 
 
 def notFitting(image, par):
    (x,y) = returnLists(image)
    result = functionresult(x,par)
    return (y - result)**2
-   (x,y) = image[1], image[0]
-   result = functionresult(x,par)
-   return (y - result)**2
 
-def cutRansacMasks(image):
-   image_bg = np.zeros_like(image)
+def cutRansacMasks(image,bg):
+   nulled = np.zeros_like(image)
    consider = np.argwhere(image)
-   rospy.loginfo(image_bg)
-   for ((x1,y1),(x2,y2)) in RANSAC_MASKS:
+   for (x1,y1),(x2,y2) in RANSAC_MASKS:
       c_i_p = np.array([(y, x) for (y, x) in consider if x1 <= x <= x2 and y1 <= y <= y2])
-      m, b = ransac(c_i_p,5,CV_THRESHOLD,10)
-
+      m, b = ransac(c_i_p,5,CV_THRESHOLD,90)
+      #scanning area
+      recFor([bg], x1, y1, x2, y2, 250, 3)
+      
       x1, x2 = np.min(c_i_p[:, 1]), np.max(c_i_p[:, 1])
       (y1,y2) = (x1*m) + b, (x2*m) + b
-      cv.line(image_bg, (int(x1),int(y1)), (int(x2),int(y2)),255,thickness=5)
-   return image_bg
+      #line function
+      recFor([image, bg], x1, y1, x2, y2, 160, 1)
+      lineFor([nulled, image, bg], x1, y1, x2, y2, 160, 1)
+   
+   return image, bg, nulled
 
 def blackoutImage(image):
    #make optimal thresholded image
-   _, infra_image_th = cv.threshold(image, CV_THRESHOLD, 255, cv.THRESH_BINARY)
+   _, infra_image_th = cv.threshold(image, 250, 255, cv.THRESH_BINARY)
 
    #black out sections efficently
    for ((x1,y1),(x2,y2)) in BLACK_RECTANGLES:
