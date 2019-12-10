@@ -23,11 +23,11 @@ OXY_SUM = (0.0,0.0,0.0,0.0)
 OXY_ODOM = Odometry()
 
 TIME_LAST = None
-SHORTOUTFLOATS = False
+SHORTOUTFLOATS = True
 
 def toShortFloat(f):
     if SHORTOUTFLOATS:
-        return float('%.8f' % (f))
+        return float('%.3f' % (f))
     return f
 
 def getTime():
