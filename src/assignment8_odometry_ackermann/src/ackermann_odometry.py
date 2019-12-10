@@ -57,6 +57,7 @@ def OXYTODOM(o,x,y,z,t):
     position.y = y
     position.z = z
 
+    rospy.loginfo(OXY_ODOM)
     denzel_odom_pub.publish(OXY_ODOM)
 
 def speed_callback(data):
