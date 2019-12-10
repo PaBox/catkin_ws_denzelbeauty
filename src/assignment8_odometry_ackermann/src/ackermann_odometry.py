@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 
-import message_filters
 import rospy
 from cv_bridge import CvBridge
-from autominy_msgs.msg import SteeringAngle, Speed, Tick
+from autominy_msgs.msg import SteeringAngle, Speed
 from nav_msgs.msg import Odometry
 import numpy as np
 import cv2 as cv
@@ -11,95 +10,145 @@ import math
 
 
 CV_BRIDGE = CvBridge()
+RP_RATE = 100
+CAR_LENGTH = 0.27
 
-INIT_FILTERED_MAP = True
+INIT_FILTERED_MAP = False
+GPS_ODOM = None
 
-FILTERED_MAP_ODOM = (0.0,0.0,0.0)
+SPEED = 0.0
+STEER = 0.0
 
-OXY_ARRAY = []
+OXY_SUM = (0.0,0.0,0.0,0.0)
+OXY_ODOM = Odometry()
 
-OXY_SUM = (0.0,0.0,0.0)
+TIME_LAST = None
+SHORTOUTFLOATS = False
 
-TICKS = 0
+def toShortFloat(f):
+    if SHORTOUTFLOATS:
+        return float('%.8f' % (f))
+    return f
 
-TIMER_UNTIL = 0
+def getTime():
+    global TIME_LAST
+    TIME_NOW = rospy.Time.now()
+    TIME_LAST = TIME_NOW
+    return TIME_NOW
 
-TIMER_STOP = True
+def getTimeDelta():
+    global TIME_LAST
+    ts = TIME_LAST
+    return (getTime() - ts).to_sec()
 
-def OXY_ADD(o,x,y):
-    global OXY_SUM
-    o_bef,x_bef,y_bef = OXY_SUM
-    OXY_SUM=(o+o_bef,x+x_bef,y+y_bef)
-    OXY_ARRAY.append((o,x,y))
-    return OXY_SUM
+def OXYTODOM(o,x,y,z,t):
+    global OXY_ODOM
+
+    #edit own odom
+    header = OXY_ODOM.pose.pose
+    position = header.position
+    orientation = header.orientation
+
+    half_o = o / 2
+
+    orientation.w = math.cos(half_o)
+    orientation.z = math.sin(half_o)
+    position.x = x
+    position.y = y
+    position.z = z
+
+    denzel_odom_pub.publish(OXY_ODOM)
+
+def speed_callback(data):
+    global SPEED
+    SPEED = data.value
+
+def steer_callback(data):
+    global STEER
+    STEER = data.value
+
+def gps_callback(data):
+    global GPS_ODOM
+    GPS_ODOM = data
 
 def filteredmap_callback(data):
-    if INIT_FILTERED_MAP:
-        header = data.pose.pose
-        position = header.position
-        orientation = header.orientation
+    #INITIALISING VALUES FROM FILTERED MAP
+    global INIT_FILTERED_MAP, OXY_SUM
+    if not INIT_FILTERED_MAP:
+        #setup paths for filtered map odom
+        headerFM = data.pose.pose
+        positionFM = headerFM.position
+        orientationFM = headerFM.orientation
 
-        global FILTERED_MAP_ODOM 
-        FILTERED_MAP_ODOM = (position.x, position.y, orientation.w)
+        #setup one time variables for own odom
+        OXY_SUM = (math.acos(orientationFM.w), positionFM.x, positionFM.y, positionFM.z)
+        rospy.loginfo(OXY_SUM)
+        INIT_FILTERED_MAP = True
 
-def tick_timer(data):
-    global TIMER_STOP
-    global TICKS
-    if not TIMER_STOP:
-        if(TICKS<TIMER_UNTIL):
-            TICKS += data.value
-        else:
-            TIMER_STOP = True
+def odometry_ackermann(timestamp, speedstamp, steerstamp):
+    global OXY_SUM
 
-def start_timer(i):
-    global TIMER_UNTIL
-    global TIMER_STOP
-    TIMER_UNTIL = TICKS+i
-    TIMER_STOP = False
+    #initial values
+    v = toShortFloat(speedstamp)
+    l = CAR_LENGTH
+    phi = toShortFloat(steerstamp)
+    o_bef,x_bef,y_bef, z = OXY_SUM
 
-def odometry_ackermann(steering_data,speed_data):
-    global INIT_FILTERED_MAP
-    while FILTERED_MAP_ODOM is (0.0,0.0,0.0):
-        message_filters.loginfo('Searching for initial Mapping')
-    if INIT_FILTERED_MAP:
-        INIT_FILTERED_MAP = False
+    O = (v/l)*math.tan(phi)
+    X = v*math.cos(o_bef)
+    Y = v*math.sin(o_bef)
+
+    delta = toShortFloat(timestamp)
     
-    if not TIMER_STOP:
-        #initial values
-        v = toShortFloat(speed_data.value)
-        l = 0.27
-        phi = steering_data.value
+    #calc summed values of odom
+    o_aft = o_bef + (delta * O)
+    x_aft = x_bef + (delta * X)
+    y_aft = y_bef + (delta * Y)
 
-        tanphi = math.degrees(math.tan(phi))
-        O = (v/l)*tanphi
+    OXY_SUM=(o_aft,x_aft,y_aft,z)
 
-        cosO = math.degrees(math.cos(math.radians(O)))
-        X = v*cosO
-
-        sinO = math.degrees(math.sin(math.radians(O)))
-        Y = v*sinO
-
-        OXY_ADD(O,X,Y)
+    OXYTODOM(o_aft,x_aft,y_aft,z,timestamp)
 
     rospy.Rate(100).sleep()
 
-def toShortFloat(f):
-    return float('%.2f' % (f))
-
 if __name__ == '__main__': 
-    rospy.init_node('odometry', anonymous=True)
+    rospy.init_node('denzel_odometry', anonymous=True)
     rospy.loginfo('Starting...')
 
-    initial_pos_sub = rospy.Subscriber('/sensors/localization/filteredmap', Odometry, filteredmap_callback, queue_size=10)
-    initial_pos_sub = rospy.Subscriber('/sensors/arduino/ticks', Tick, tick_timer, queue_size=10)
+    #Publisher for own Odometry
+    denzel_odom_pub = rospy.Publisher('denzel_odom', Odometry, queue_size=10)
 
-    steering_sub = message_filters.Subscriber('/sensors/steering', SteeringAngle)
-    speed_sub = message_filters.Subscriber('/sensors/speed', Speed)
-    ts = message_filters.ApproximateTimeSynchronizer([steering_sub, speed_sub], 10, 0.1)
-    ts.registerCallback(odometry_ackermann)
+    #Subscribers for internal ticks and filteredmap for inital position
+    initial_pos_sub = rospy.Subscriber('/sensors/localization/filtered_map', Odometry, filteredmap_callback, queue_size=10)
+    gps_sub = rospy.Subscriber('/communication/gps/16', Odometry, gps_callback, queue_size=10)
 
-    start_timer(1000)
-    rospy.sleep(3)
-    rospy.loginfo(OXY_SUM)
+    #subscribers for syncing callback - improved with asynchrous callback and global values
+    steer_sub = rospy.Subscriber('/sensors/steering', SteeringAngle, steer_callback, queue_size=10)
+    speed_sub = rospy.Subscriber('/sensors/speed', Speed, speed_callback, queue_size=10)
 
-    cv.destroyAllWindows()
+    #set rate of odometry beeing called
+    rate = rospy.Rate(RP_RATE)
+
+    #creating own odom infos
+    OXY_ODOM.header.frame_id = 'map'
+    OXY_ODOM.child_frame_id = 'base_link'
+    
+     #set first timestamp for delta t
+    getTime()
+    rospy.sleep(1)
+
+    try:
+        while not rospy.is_shutdown():
+            TIME_DIF = getTimeDelta()
+
+            if INIT_FILTERED_MAP:
+                odometry_ackermann(TIME_DIF,SPEED,STEER)
+            else:
+                rospy.loginfo('Waiting for filtered_map Odom.')
+
+            rate.sleep()
+        rospy.spin()
+    except rospy.ROSInterruptException:
+        rospy.loginfo('KILL')
+
+        
