@@ -13,7 +13,7 @@ GPS_ID = 999
 
 E_LAST = 0.0
 
-KD = 1.0
+KD = 1.5
 KP = 1.0
 
 ANGLE = 0.0
@@ -66,14 +66,18 @@ def makeStep(time_passed):
     global E_LAST
 
     # calculate e(t) = r(t) - y(t)
-    E = DESIRED_ANGLE - ANGLE
+    if DESIRED_ANGLE > ANGLE:
+      E = DESIRED_ANGLE - ANGLE
+    else:
+      E = ANGLE-DESIRED_ANGLE
 
-    E_DIF = (E_LAST-E)/(1.0/RP_RATE)
-    STEER = ((KP*E) + (KD*E_DIF))/math.pi
+
+    E_DIF = (E-E_LAST)
+    STEER = ((KP*E) + (KD*E_DIF))
 
     # publish steering command
     steer_output(STEER)
-    rospy.loginfo(' {}'.format(E))
+    rospy.loginfo(' {}'.format(STEER))
 
     # for next step
     E_LAST = E
